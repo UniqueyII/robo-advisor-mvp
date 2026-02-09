@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 import os
 import yfinance as yf
 
-# نمادهای جایگزین - فقط از نمادهای ساده استفاده می‌کنیم
+# از نمادهای ساده استفاده می‌کنیم
 SYMBOLS = [
     {'name': 'Gold', 'symbols': ['GLD']},
     {'name': 'Silver', 'symbols': ['SLV']},
