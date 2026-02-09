@@ -94,7 +94,12 @@ streamlit run src/dashboard.py
 6.  مرورگر شما به طور خودکار باز می‌شود و اپلیکیشن در `http://localhost:8501` در دسترس خواهد بود.
 
 ## 📸 گالری تصاویر
-*- - -*
+<img width="1879" height="1079" alt="image" src="https://github.com/user-attachments/assets/fc41bd80-7e9d-4b0c-9666-e59929a9d65e" />
+
+<img width="1878" height="1073" alt="image" src="https://github.com/user-attachments/assets/5ab1c480-2b66-408a-8f0a-b68537a2434a" />
+
+<img width="1914" height="1008" alt="image" src="https://github.com/user-attachments/assets/edad21c8-b5b7-4ecb-843f-7908a5011075" />
+
 | صفحه پرسشنامه ریسک | پیشنهاد پرتفولیو |
 | :---: | :---: |
 | ![صفحه پرسشنامه](https://via.placeholder.com/400x250/3E8ACC/FFFFFF?text=Risk+Questionnaire+Page) | ![صفحه نتایج](https://via.placeholder.com/400x250/2E7D32/FFFFFF?text=Portfolio+Recommendation) |
