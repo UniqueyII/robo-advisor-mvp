@@ -55,4 +55,4 @@ python src/data_fetcher.py
 
 # اجرای داشبورد
 streamlit run src/dashboard.py
-# سپس مرورگر باز می‌شود و می‌توانید از http://localhost:8501 استفاده کنید.
+# 
