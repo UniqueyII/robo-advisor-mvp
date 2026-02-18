@@ -4,6 +4,10 @@
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.24%2B-red)
 ![Finance](https://img.shields.io/badge/Finance-Quant-orange)
 ![GitHub](https://img.shields.io/badge/GitHub-Repository-brightgreen)
+[![Tests](https://github.com/UniqueyII/robo-advisor-mvp/actions/workflows/tests.yml/badge.svg)](https://github.com/UniqueyII/robo-advisor-mvp/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/UniqueyII/robo-advisor-mvp/branch/main/graph/badge.svg)](https://codecov.io/gh/UniqueyII/robo-advisor-mvp)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.24+-red.svg)](https://streamlit.io/)
 
 ## 🌟 پروژه نمونه کار حرفه‌ای
 
