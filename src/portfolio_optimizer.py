@@ -413,18 +413,60 @@ class PortfolioOptimizer:
         return plt
 
 # تابع کمکی برای استفاده سریع
-def load_and_optimize(csv_path='data/processed/market_data.csv'):
-    """
-    بارگذاری داده‌ها و ایجاد بهینه‌ساز
-    """
-    print(f"📂 بارگذاری داده‌ها از {csv_path}...")
-    df = pd.read_csv(csv_path, index_col=0, parse_dates=True)
-    print(f"✅ {len(df)} روز داده بارگذاری شد.")
-    
-    optimizer = PortfolioOptimizer(df)
-    print(f"🔧 بهینه‌ساز با {optimizer.n_assets} دارایی ایجاد شد.")
-    
-    return optimizer
+def load_and_optimize():
+    """Load REAL data from Yahoo Finance and run optimization"""
+    try:
+        # Define assets to fetch
+        assets = {
+            'Gold': 'GC=F',
+            'Silver': 'SI=F',
+            'Bitcoin': 'BTC-USD',
+            'Ethereum': 'ETH-USD'
+        }
+        
+        # Fetch real data from Yahoo Finance
+        from data_fetcher import DataFetcher
+        fetcher = DataFetcher()
+        
+        # Get last 2 years of daily data
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=730)
+        
+        # Show progress
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        
+        data = {}
+        for i, (name, symbol) in enumerate(assets.items()):
+            status_text.text(f"Fetching {name} data from Yahoo Finance...")
+            df = fetcher.get_historical_data(symbol, '1d', start_date, end_date)
+            if df is not None and not df.empty:
+                data[name] = df['Close']
+            progress_bar.progress((i + 1) / len(assets))
+        
+        # Clear progress indicators
+        progress_bar.empty()
+        status_text.empty()
+        
+        # Create DataFrame with all assets
+        df = pd.DataFrame(data)
+        
+        # Drop any rows with missing data
+        df = df.dropna()
+        
+        if df.empty:
+            st.error("❌ Could not fetch data from Yahoo Finance. Please try again later.")
+            return None
+            
+        # Show success message with date range
+        st.success(f"✅ Fetched real data from {df.index[0].date()} to {df.index[-1].date()}")
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"❌ Error fetching real data: {str(e)}")
+        print(f"Error in load_and_optimize: {e}")
+        return None
 
 if __name__ == "__main__":
     # تست ماژول
