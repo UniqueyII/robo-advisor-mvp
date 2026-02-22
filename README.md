@@ -11,7 +11,7 @@
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://robo-advisor-mvp.streamlit.app)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-
+![Tests](https://github.com/UniqueyII/robo-advisor-mvp/actions/workflows/tests.yml/badge.svg)
 ## 🌟 پروژه نمونه کار حرفه‌ای
 
 یک سیستم مشاوره سرمایه‌گذاری خودکار که با استفاده از تکنیک‌های پیشرفته مالی، سبد سرمایه‌گذاری بهینه را پیشنهاد می‌دهد.
