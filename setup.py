@@ -1,0 +1,15 @@
+﻿from setuptools import setup, find_packages
+
+setup(
+    name='robo-advisor-mvp',
+    version='0.1',
+    packages=find_packages(),
+    install_requires=[
+        'streamlit>=1.28.0',
+        'pandas>=2.0.0',
+        'numpy>=1.24.0',
+        'yfinance>=0.2.28',
+        'plotly>=5.17.0',
+        'scipy>=1.11.0',
+    ],
+)
