@@ -8,6 +8,9 @@
 [![codecov](https://codecov.io/gh/UniqueyII/robo-advisor-mvp/branch/main/graph/badge.svg)](https://codecov.io/gh/UniqueyII/robo-advisor-mvp)
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.24+-red.svg)](https://streamlit.io/)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://robo-advisor-mvp.streamlit.app)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 ## 🌟 پروژه نمونه کار حرفه‌ای
 
