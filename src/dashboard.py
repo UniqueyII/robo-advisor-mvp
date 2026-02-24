@@ -11,8 +11,6 @@ from data_fetcher import create_dataframe
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from src.portfolio_optimizer import load_and_optimize
-
 # ==================== تنظیمات اولیه ====================
 st.set_page_config(
     page_title="Robo-Advisor MVP",
@@ -203,6 +201,29 @@ def calculate_risk_score(answers):
         "normalized_score": normalized_score,
         "profile": profile
     }
+
+def save_json_report(report):
+    """ذخیره گزارش به صورت JSON"""
+    import json
+    
+    summary = {
+        "تاریخ_محاسبه": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "پروفایل_ریسک": report.get('risk_profile', 'N/A'),
+        "سرمایه_گذاری_تومان": report.get('investment_amount', 0),
+        "وزن_دارایی‌ها": report.get('allocation', {}),
+        "بازده_مورد_انتظار_درصد": report.get('expected_return', 0) * 100,
+        "ریسک_نوسان_درصد": report.get('volatility', 0) * 100,
+        "نسبت_شارپ": report.get('sharpe_ratio', 0),
+        "توصیه": report.get('recommendation', {}).get('text', 'N/A')
+    }
+    
+    # ایجاد دکمه دانلود
+    st.download_button(
+        label="📥 دانلود گزارش JSON",
+        data=json.dumps(summary, indent=2, ensure_ascii=False),
+        file_name=f"portfolio_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
+        mime="application/json"
+    )
 
 # ==================== صفحه ۱: شروع ====================
 def show_start_page():
@@ -510,12 +531,14 @@ def show_portfolio_input_page():
 
 # ==================== صفحه ۵: محاسبه سبد ====================
 def show_portfolio_calculation_page():
-    """صفحه محاسبه سبد"""
+    """صفحه محاسبه سبد (با اسپینر و سپس رفتن به نتایج)"""
     st.markdown('<h1 class="main-header">⚡ در حال محاسبه سبد بهینه</h1>', unsafe_allow_html=True)
     
     if 'risk_profile' not in st.session_state or 'investment' not in st.session_state:
         st.error("❌ اطلاعات ناقص است!")
-        st.button("بازگشت", on_click=lambda: st.session_state.update({"page": "portfolio_input"}))
+        if st.button("بازگشت"):
+            st.session_state.page = "portfolio_input"
+            st.rerun()
         return
     
     # نمایش اطلاعات ورودی
@@ -534,7 +557,15 @@ def show_portfolio_calculation_page():
     
     # محاسبات
     with st.spinner("🔍 در حال بارگذاری داده‌های بازار... (لطفاً صبر کنید)"):
-        optimizer = load_and_optimize()
+        df = load_and_optimize()
+        
+        if df is None or df.empty:
+            st.error("❌ خطا در دریافت داده‌های بازار")
+            st.button("بازگشت", on_click=lambda: st.session_state.update({"page": "portfolio_input"}))
+            return
+        
+        # Create optimizer instance
+        optimizer = PortfolioOptimizer(df)
         st.session_state.optimizer = optimizer
     
     with st.spinner("⚙️ در حال بهینه‌سازی سبد با MPT..."):
@@ -552,71 +583,34 @@ def show_portfolio_calculation_page():
     st.rerun()
 
 # ==================== صفحه ۶: نتایج سبد ====================
-def show_portfolio_calculation_page():
-    st.header("📊 محاسبه سبد سرمایه‌گذاری بهینه")
+def show_portfolio_results_page():
+    """نمایش نتایج سبد بهینه"""
+    st.markdown('<h1 class="main-header">📊 نتایج سبد سرمایه‌گذاری بهینه</h1>', unsafe_allow_html=True)
     
-    # Get investment amount from session state
-    investment = st.session_state.get('investment', 160000000)  # Default 160 million
+    # Check if we have results in session state
+    if 'report' not in st.session_state:
+        st.warning("⚠️ ابتدا سبد بهینه را محاسبه کنید")
+        if st.button("رفتن به صفحه محاسبه"):
+            st.session_state.page = "portfolio_calculation"
+            st.rerun()
+        return
+    
+    # Get results from session state
+    report = st.session_state.report
+    investment = st.session_state.get('investment', 160000000)
     
     # Display investment amount
     st.metric("💰 مبلغ سرمایه‌گذاری", f"{investment:,.0f} تومان")
     
-    # Load and optimize
-    with st.spinner("🔄 در حال محاسبه سبد بهینه..."):
-        df = load_and_optimize()
-        
-        if df is None or df.empty:
-            st.error("❌ خطا در دریافت داده‌های بازار")
-            return
-        
-        # Create optimizer instance
-        optimizer = PortfolioOptimizer(df)
-        
-        # Check if risk profile exists in session state
-        if 'risk_profile' not in st.session_state:
-            st.warning("⚠️ لطفاً ابتدا پروفایل ریسک خود را تعیین کنید")
-            if st.button("رفتن به صفحه پروفایل ریسک"):
-                st.session_state.page = "risk_profile"
-                st.rerun()
-            return
-        
-        # Generate report
-        try:
-            report = optimizer.generate_report(st.session_state.risk_profile, investment)
-        
-            # Save to session state
-            st.session_state.portfolio_results = report
-
-            # Display results
-            st.subheader("📈 نتایج بهینه‌سازی")
-            
-            # Show allocation
-            st.write("**توزیع دارایی‌ها:**")
-            for asset, weight in report['allocation'].items():
-                amount = weight * investment
-                st.write(f"- {asset}: {weight:.1%} ({amount:,.0f} تومان)")
-            
-            # Show metrics
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("بازده مورد انتظار", f"{report['expected_return']:.2%}")
-            with col2:
-                st.metric("ریسک (انحراف معیار)", f"{report['volatility']:.2%}")
-            with col3:
-                st.metric("نسبت شارپ", f"{report['sharpe_ratio']:.2f}")
-                
-            if st.button("مشاهده نتایج کامل"):
-                st.session_state.page = "portfolio_results"
-                st.rerun()
-            
-        except Exception as e:
-            st.error(f"❌ خطا در تولید گزارش: {str(e)}")
-            print(f"Error generating report: {e}")
-    
     # بخش ۱: توزیع دارایی‌ها
     st.markdown("### 📊 توزیع دارایی‌ها")
     
-    weights = report['optimal_portfolio']['weights']
+    # Check if allocation exists
+    if 'allocation' in report:
+        weights = report['allocation']
+    else:
+        st.error("❌ داده‌های توزیع دارایی در دسترس نیست")
+        return
     
     # نمودار
     fig = go.Figure(data=[go.Pie(
@@ -633,7 +627,7 @@ def show_portfolio_calculation_page():
     weights_df = pd.DataFrame({
         'دارایی': list(weights.keys()),
         'وزن': [f"{w:.1%}" for w in weights.values()],
-        'مبلغ (تومان)': [f"{w * report['investment_amount']:,.0f}" for w in weights.values()],
+        'مبلغ (تومان)': [f"{w * investment:,.0f}" for w in weights.values()],
         'توضیح': [
             'دارایی امن در تورم',
             'صنعتی با نوسان متوسط',
@@ -645,269 +639,153 @@ def show_portfolio_calculation_page():
     
     st.markdown("---")
     
-    # بخش ۲: تحلیل ریسک
-    st.markdown("### 🎲 تحلیل ریسک و بازده")
-    
-    mc = report['monte_carlo']
+    # بخش ۲: معیارهای عملکرد
+    st.markdown("### 📈 معیارهای عملکرد")
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
+        expected_return = report.get('expected_return', 0)
         st.metric(
-            "بازده مورد انتظار شبیه‌سازی",
-            f"{mc['expected_return_pct']:.1f}%",
-            help="میانگین بازده در ۱۰۰۰ شبیه‌سازی"
+            "بازده مورد انتظار سالانه",
+            f"{expected_return:.2%}",
+            help="بازده مورد انتظار سالانه بر اساس داده‌های تاریخی"
         )
     
     with col2:
+        volatility = report.get('volatility', 0)
         st.metric(
-            "احتمال زیان",
-            f"{mc['prob_loss']:.1%}",
-            delta_color="inverse",
-            help="احتمال کمتر شدن ارزش سبد نسبت به امروز"
+            "ریسک (انحراف معیار)",
+            f"{volatility:.2%}",
+            help="نوسان سالانه سبد سرمایه‌گذاری"
         )
     
     with col3:
+        sharpe = report.get('sharpe_ratio', 0)
         st.metric(
-            "Expected Shortfall",
-            f"{mc['cvar_95']:,.0f} تومان",
-            delta_color="inverse",
-            help="میانگین ضرر در بدترین 5% سناریوها"
+            "نسبت شارپ",
+            f"{sharpe:.2f}",
+            help="بازده به ازای واحد ریسک (هرچه بالاتر بهتر)"
         )
     
     st.markdown("---")
     
-    # بخش ۳: توصیه‌ها
-    st.markdown("### 💡 توصیه‌های سرمایه‌گذاری")
+    # بخش ۳: تحلیل ریسک
+    st.markdown("### 🎲 تحلیل ریسک")
     
-    rec = report['recommendation']
+    # Check if VaR exists
+    if 'VaR' in report:
+        var_data = report['VaR']
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            var_percent = var_data.get('VaR_95', 0)
+            var_amount = var_percent * investment
+            st.metric(
+                "Value at Risk (95%)",
+                f"{var_percent:.2%}",
+                f"{var_amount:,.0f} تومان",
+                help="حداکثر ضرر مورد انتظار در 95% موارد (یک روز)"
+            )
+        
+        with col2:
+            cvar_percent = var_data.get('CVaR_95', 0)
+            cvar_amount = cvar_percent * investment
+            st.metric(
+                "CVaR (95%)",
+                f"{cvar_percent:.2%}",
+                f"{cvar_amount:,.0f} تومان",
+                help="میانگین ضرر در 5% بدترین موارد"
+            )
     
-    st.success(f"**{rec['text']}**")
-    
-    st.markdown(f"""
-    #### 📋 خلاصه توصیه‌ها:
-    
-    - **سطح ریسک:** {rec['risk_level']}
-    - **افق زمانی پیشنهادی:** {rec['suggested_horizon']}
-    - **بازده مورد انتظار:** {rec['expected_return']:.1f}%
-    - **ریسک قابل توجه:** حداکثر ضرر احتمالی (VaR) = {report['risk_metrics']['var_historical']:,.0f} تومان
-    - **نکته مهم:** این تحلیل بر اساس داده‌های تاریخی است و تضمینی برای آینده نیست
-    """)
+    # Check if monte_carlo exists
+    if 'monte_carlo' in report:
+        mc = report['monte_carlo']
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric(
+                "بازده شبیه‌سازی",
+                f"{mc.get('expected_return_pct', 0):.1f}%",
+                help="میانگین بازده در ۱۰۰۰ شبیه‌سازی"
+            )
+        
+        with col2:
+            st.metric(
+                "احتمال زیان",
+                f"{mc.get('prob_loss', 0):.1%}",
+                delta_color="inverse",
+                help="احتمال کمتر شدن ارزش سبد نسبت به امروز"
+            )
+        
+        with col3:
+            st.metric(
+                "Expected Shortfall",
+                f"{mc.get('cvar_95', 0):,.0f} تومان",
+                delta_color="inverse",
+                help="میانگین ضرر در بدترین 5% سناریوها"
+            )
     
     st.markdown("---")
     
-    # بخش ۴: خروجی
-    st.markdown("### 📥 خروجی‌ها")
+    # بخش ۴: توصیه‌ها
+    st.markdown("### 💡 توصیه‌های سرمایه‌گذاری")
     
-    col1, col2, col3 = st.columns(3)
+    if 'recommendation' in report:
+        rec = report['recommendation']
+        st.success(f"**{rec.get('text', 'توصیه بر اساس پروفایل ریسک شما')}**")
+        
+        st.markdown(f"""
+        #### 📋 خلاصه توصیه‌ها:
+        
+        - **سطح ریسک:** {rec.get('risk_level', 'متناسب با پروفایل')}
+        - **افق زمانی پیشنهادی:** {rec.get('suggested_horizon', 'بلندمدت')}
+        - **بازده مورد انتظار:** {rec.get('expected_return', report.get('expected_return', 0)):.1f}%
+        """)
+    else:
+        risk_profile = st.session_state.get('risk_profile', 'moderate')
+        profile_farsi = {
+            "Conservative": "محافظه‌کار",
+            "Moderate": "متعادل",
+            "Aggressive": "تهاجمی"
+        }
+        
+        risk_texts = {
+            "Conservative": "سبد محافظه‌کارانه با تمرکز بر دارایی‌های امن مانند طلا",
+            "Moderate": "سبد متعادل با ترکیبی از دارایی‌های امن و پرریسک",
+            "Aggressive": "سبد تهاجمی با تمرکز بر رشد بلندمدت و دارایی‌های پرریسک"
+        }
+        
+        st.success(f"**{risk_texts.get(st.session_state.risk_profile, 'سبد متناسب با پروفایل ریسک شما')}**")
+    
+    st.markdown("---")
+    
+    # بخش ۵: دکمه‌های ناوبری
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("💾 ذخیره گزارش JSON", use_container_width=True):
+        if st.button("💾 ذخیره گزارش", use_container_width=True):
             save_json_report(report)
     
     with col2:
-        if st.button("🖨️ چاپ گزارش", use_container_width=True):
-            st.info("در نسخه کامل، گزارش PDF تولید می‌شود")
+        if st.button("🔄 محاسبه مجدد", use_container_width=True):
+            st.session_state.page = "portfolio_calculation"
+            st.rerun()
     
     with col3:
-        if st.button("🔄 محاسبه مجدد", type="secondary", use_container_width=True):
-            # پاک کردن محاسبات قبلی
-            for key in ['report', 'optimizer']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.session_state.page = "portfolio_input"
-            st.rerun()
-    
-    st.markdown("---")
-    
-    # دکمه‌های ناوبری نهایی
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("◀️ بازگشت به ورود اطلاعات", use_container_width=True):
-            st.session_state.page = "portfolio_input"
-            st.rerun()
-    
-    with col2:
-        if st.button("📋 شروع پرسشنامه جدید", type="secondary", use_container_width=True):
+        if st.button("📋 شروع جدید", use_container_width=True):
             # ریست همه چیز
             for key in list(st.session_state.keys()):
                 if key != 'page':
                     del st.session_state[key]
-            st.session_state.page = "questionnaire"
-            st.rerun()
-    
-    with col3:
-        if st.button("🚀 محاسبه با اطلاعات جدید", type="primary", use_container_width=True):
-            # فقط ریست محاسبات
-            for key in ['report', 'optimizer']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.session_state.page = "portfolio_input"
-            st.rerun()
-
-def save_json_report(report):
-    """ذخیره گزارش به صورت JSON"""
-    import json
-    
-    summary = {
-        "تاریخ_محاسبه": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "پروفایل_ریسک": report['risk_profile'],
-        "سرمایه_گذاری_تومان": report['investment_amount'],
-        "وزن_دارایی‌ها": report['optimal_portfolio']['weights'],
-        "بازده_مورد_انتظار_درصد": report['optimal_portfolio']['stats']['return'] * 100,
-        "ریسک_نوسان_درصد": report['optimal_portfolio']['stats']['volatility'] * 100,
-        "نسبت_شارپ": report['optimal_portfolio']['stats']['sharpe_ratio'],
-        "VaR_95_تومان": report['risk_metrics']['var_historical'],
-        "Expected_Shortfall": report['monte_carlo']['cvar_95'],
-        "احتمال_زیان": report['monte_carlo']['prob_loss'],
-        "توصیه": report['recommendation']['text']
-    }
-    
-    # ایجاد دکمه دانلود
-    st.download_button(
-        label="📥 دانلود گزارش JSON",
-        data=json.dumps(summary, indent=2, ensure_ascii=False),
-        file_name=f"portfolio_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-        mime="application/json"
-    )
-
-def show_portfolio_results_page():
-    """نمایش نتایج سبد بهینه"""
-    st.header("📊 نتایج سبد سرمایه‌گذاری بهینه")
-    
-    # Check if we have results in session state
-    if 'portfolio_results' not in st.session_state:
-        st.warning("⚠️ ابتدا سبد بهینه را محاسبه کنید")
-        if st.button("رفتن به صفحه محاسبه"):
-            st.session_state.page = "portfolio_calculation"
-            st.rerun()
-        return
-    
-    # Get results from session state
-    results = st.session_state.portfolio_results
-    investment = st.session_state.get('investment', 160000000)
-    
-    # Display investment amount
-    st.metric("💰 مبلغ سرمایه‌گذاری", f"{investment:,.0f} تومان")
-    
-    # Display allocation
-    st.subheader("📈 توزیع بهینه دارایی‌ها")
-    
-    # Create columns for assets
-    cols = st.columns(len(results['allocation']))
-    for i, (asset, weight) in enumerate(results['allocation'].items()):
-        amount = weight * investment
-        with cols[i]:
-            st.metric(
-                asset, 
-                f"{weight:.1%}",
-                f"{amount:,.0f} تومان"
-            )
-    
-    # Display as pie chart
-    import plotly.graph_objects as go
-    
-    fig = go.Figure(data=[go.Pie(
-        labels=list(results['allocation'].keys()),
-        values=list(results['allocation'].values()),
-        hole=.3,
-        marker=dict(colors=['gold', 'silver', 'orange', 'purple'])
-    )])
-    
-    fig.update_layout(
-        title="ترکیب سبد سرمایه‌گذاری",
-        height=400
-    )
-    
-    st.plotly_chart(fig, use_container_width=True)
-    
-    # Display metrics
-    st.subheader("📊 شاخص‌های عملکرد")
-    
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(
-            "بازده مورد انتظار سالانه",
-            f"{results['expected_return']:.2%}",
-            delta=None
-        )
-    with col2:
-        st.metric(
-            "ریسک (انحراف معیار)",
-            f"{results['volatility']:.2%}",
-            delta=None
-        )
-    with col3:
-        st.metric(
-            "نسبت شارپ",
-            f"{results['sharpe_ratio']:.2f}",
-            delta=None
-        )
-    
-    # Display VaR if available
-    if 'VaR' in results:
-        st.subheader("⚠️ ریسک سبد (VaR)")
-        col1, col2 = st.columns(2)
-        with col1:
-            st.metric(
-                "Value at Risk (95%)",
-                f"{results['VaR']['VaR_95']:.2%}",
-                help="حداکثر ضرر مورد انتظار در 95% موارد"
-            )
-        with col2:
-            st.metric(
-                "CVaR (95%)",
-                f"{results['VaR']['CVaR_95']:.2%}",
-                help="میانگین ضرر در 5% بدترین موارد"
-            )
-    
-    # Display efficient frontier if available
-    if 'efficient_frontier' in results:
-        st.subheader("📈 مرز کارا (Efficient Frontier)")
-        fig2 = go.Figure()
-        
-        # Add efficient frontier
-        fig2.add_trace(go.Scatter(
-            x=results['efficient_frontier']['volatility'],
-            y=results['efficient_frontier']['return'],
-            mode='lines',
-            name='مرز کارا',
-            line=dict(color='blue', width=2)
-        ))
-        
-        # Add optimal portfolio
-        fig2.add_trace(go.Scatter(
-            x=[results['volatility']],
-            y=[results['expected_return']],
-            mode='markers',
-            name='سبد بهینه',
-            marker=dict(color='red', size=15, symbol='star')
-        ))
-        
-        fig2.update_layout(
-            title="مرز کارا و سبد بهینه",
-            xaxis_title="ریسک (Volatility)",
-            yaxis_title="بازده مورد انتظار",
-            height=500
-        )
-        
-        st.plotly_chart(fig2, use_container_width=True)
-    
-    # Navigation buttons
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        if st.button("🔄 محاسبه مجدد"):
-            st.session_state.page = "portfolio_calculation"
-            st.rerun()
-    with col2:
-        if st.button("🏠 صفحه اصلی"):
             st.session_state.page = "start"
             st.rerun()
-    with col3:
-        if st.button("📥 ذخیره گزارش"):
-            st.success("گزارش با موفقیت ذخیره شد")
-            
+    
+    with col4:
+        if st.button("🏠 صفحه اصلی", use_container_width=True):
+            st.session_state.page = "start"
+            st.rerun()
+
 # ==================== تابع اصلی ====================
 def main():
     """تابع اصلی"""
