@@ -44,7 +44,17 @@ def fetch_asset_simple(symbol, years=3):
     except Exception as e:
         print(f"    ❌ خطا: {str(e)}")
         return None
-
+    
+def get_historical_data(self, symbol, interval='1d', start=None, end=None):
+    """Fetch historical data from Yahoo Finance"""
+    try:
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(interval=interval, start=start, end=end)
+        return df
+    except Exception as e:
+        print(f"Error fetching {symbol}: {e}")
+        return None
+    
 def create_real_data_simple():
     """دریافت ساده داده واقعی"""
     print("📥 دریافت داده‌های واقعی...")
