@@ -413,61 +413,45 @@ class PortfolioOptimizer:
         plt.grid(True, alpha=0.3)
         
         return plt
-
-# تابع کمکی برای استفاده سریع
+    
 def load_and_optimize():
-    """Load REAL data from Yahoo Finance and run optimization"""
+    """Load REAL data from Yahoo Finance using data_fetcher functions"""
     try:
-        # Define assets to fetch
-        assets = {
-            'Gold': 'GC=F',
-            'Silver': 'SI=F',
-            'Bitcoin': 'BTC-USD',
-            'Ethereum': 'ETH-USD'
-        }
+        # Import the functions from data_fetcher (NOT a class)
+        from data_fetcher import create_dataframe
         
-        # Fetch real data from Yahoo Finance
-        from data_fetcher import DataFetcher
-        fetcher = DataFetcher()
-        
-        # Get last 2 years of daily data
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=730)
-        
-        # Show progress
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        data = {}
-        for i, (name, symbol) in enumerate(assets.items()):
-            status_text.text(f"Fetching {name} data from Yahoo Finance...")
-            df = fetcher.get_historical_data(symbol, '1d', start_date, end_date)
-            if df is not None and not df.empty:
-                data[name] = df['Close']
-            progress_bar.progress((i + 1) / len(assets))
-        
-        # Clear progress indicators
-        progress_bar.empty()
-        status_text.empty()
-        
-        # Create DataFrame with all assets
-        df = pd.DataFrame(data)
-        
-        # Drop any rows with missing data
-        df = df.dropna()
-        
-        if df.empty:
-            st.error("❌ Could not fetch data from Yahoo Finance. Please try again later.")
-            return None
+        # Show progress in Streamlit
+        with st.spinner("📥 دریافت داده‌های واقعی از Yahoo Finance..."):
+            # Use your existing function to get real data
+            df = create_dataframe(use_real=True)
             
-        # Show success message with date range
-        st.success(f"✅ Fetched real data from {df.index[0].date()} to {df.index[-1].date()}")
-        
-        return df
-        
+            if df is None or df.empty:
+                st.warning("⚠️ دریافت داده واقعی ممکن نبود. استفاده از داده نمونه...")
+                df = create_dataframe(use_real=False)
+            
+            if df is None or df.empty:
+                st.error("❌ داده‌ای موجود نیست. لطفاً بعداً تلاش کنید.")
+                return None
+            
+            # Display success message
+            st.success(f"✅ داده‌ها با موفقیت دریافت شدند: {df.index[0].date()} تا {df.index[-1].date()}")
+            
+            return df
+            
     except Exception as e:
-        st.error(f"❌ Error fetching real data: {str(e)}")
+        st.error(f"❌ خطا در دریافت داده: {str(e)}")
         print(f"Error in load_and_optimize: {e}")
+        
+        # Fallback to sample data
+        try:
+            from data_fetcher import create_sample_data
+            st.warning("⚠️ استفاده از داده نمونه")
+            df = create_sample_data()
+            if df is not None:
+                return df
+        except:
+            pass
+        
         return None
 
 if __name__ == "__main__":
