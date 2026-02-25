@@ -165,6 +165,21 @@ RISK_QUESTIONS = [
 ]
 
 # ==================== HELPER FUNCTIONS ====================
+def validate_data(df):
+    """
+    Validate that the DataFrame contains clean, usable data.
+    Returns (is_valid: bool, message: str)
+    """
+    if df is None:
+        return False, "No data received"
+    if df.empty:
+        return False, "DataFrame is empty"
+    if df.isnull().any().any():
+        return False, "Data contains NaN values"
+    if (df <= 0).any().any():
+        return False, "Data contains non-positive values (prices must be >0)"
+    return True, "Data is valid"
+
 def calculate_risk_score(answers):
     """Calculate risk score from questionnaire answers"""
     raw_score = sum(answers)
