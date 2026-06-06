@@ -51,6 +51,7 @@ def fetch_asset_data(symbol, years=3, progress_callback=None):
         # استفاده از yf.download (پایدارتر)
         data = yf.download(symbol, start=start_date, end=end_date, progress=False)
         
+        # اگر خالی بود، روش دوم: Ticker.history
         if data.empty:
             ticker = yf.Ticker(symbol)
             data = ticker.history(start=start_date, end=end_date)
@@ -103,7 +104,6 @@ def fetch_all_assets(years=3, progress_callback=None):
         print("⚠️ Need at least 2 assets for portfolio optimization")
         return None
     
-    # همسان‌سازی ایندکس‌ها (روزهای مشترک)
     print("\n🔄 Aligning date indices...")
     
     common_index = None
@@ -134,8 +134,8 @@ def fetch_all_assets(years=3, progress_callback=None):
     print(f"  Rows: {len(df)}, Columns: {list(df.columns)}")
     print(f"  Date range: {df.index[0].date()} to {df.index[-1].date()}")
     
-    # تبدیل به تومان با نرخ واقعی
-    usd_rate = get_usd_to_toman_rate()
+    # تبدیل به تومان
+    usd_rate = get_live_usd_to_toman()
     print(f"\n💰 Converting to Toman (rate: {usd_rate:,.0f} Toman/USD)...")
     for col in df.columns:
         df[col] = df[col] * usd_rate
