@@ -98,7 +98,7 @@ streamlit run src/dashboard.py
     ```bash
     streamlit run src/dashboard.py
     ```
-6.  مرورگر شما به طور خودکار باز می‌شود و اپلیکیشن در `http://localhost:8501` در دسترس خواهد بود.
+6.  مرورگر شما به طور خودکار باز می‌شود و اپلیکیشن در `http://192.168.1.104:8501` در دسترس خواهد بود.
 
 ## 📸 گالری تصاویر
 <img width="1879" height="1079" alt="image" src="https://github.com/user-attachments/assets/fc41bd80-7e9d-4b0c-9666-e59929a9d65e" />

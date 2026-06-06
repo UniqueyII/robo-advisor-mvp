@@ -1,8 +1,6 @@
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, timedelta
-import requests
-import re
 
 # Asset symbols for Yahoo Finance - استفاده از قیمت اونس برای طلا و نقره
 SYMBOLS = [
@@ -13,28 +11,8 @@ SYMBOLS = [
 ]
 
 def get_usd_to_toman_rate():
-    """
-    دریافت نرخ لحظه‌ای USDT به تومان از نوبیتکس
-    """
-    try:
-        # API نوبیتکس برای جفت USDT/تومان
-        url = "https://api.nobitex.ir/market/stats?srcCurrency=usdt&dstCurrency=rls"
-        response = requests.get(url, timeout=10)
-        
-        if response.status_code == 200:
-            data = response.json()
-            # قیمت فروش USDT (bestSell)
-            rate = float(data['stats']['usdt-rls']['bestSell'])
-            print(f"💰 Live rate from Nobitex: {rate:,.0f} Toman/USDT")
-            return rate
-        
-        # اگر نوبیتکس کار نکرد، از قیمت ثابت استفاده کن
-        print("⚠️ Nobitex unavailable, using fallback 173,000")
-        return 173000
-        
-    except Exception as e:
-        print(f"⚠️ Error: {e}, using fallback 173,000")
-        return 173000
+    """Get USD to Toman exchange rate (approximate)"""
+    return 700000  # 700,000 Toman per USD
 
 def fetch_asset_data(symbol, years=3, progress_callback=None):
     """
@@ -51,6 +29,7 @@ def fetch_asset_data(symbol, years=3, progress_callback=None):
         # استفاده از yf.download (پایدارتر)
         data = yf.download(symbol, start=start_date, end=end_date, progress=False)
         
+        # اگر خالی بود، روش دوم: Ticker.history
         if data.empty:
             ticker = yf.Ticker(symbol)
             data = ticker.history(start=start_date, end=end_date)
@@ -115,6 +94,7 @@ def fetch_all_assets(years=3, progress_callback=None):
     
     print(f"  Common dates: {len(common_index)} days")
     
+    # محدود کردن همه سری‌ها به ایندکس مشترک
     aligned_data = {}
     for name, series in data_dict.items():
         aligned_data[name] = series.loc[common_index]
@@ -134,7 +114,7 @@ def fetch_all_assets(years=3, progress_callback=None):
     print(f"  Rows: {len(df)}, Columns: {list(df.columns)}")
     print(f"  Date range: {df.index[0].date()} to {df.index[-1].date()}")
     
-    # تبدیل به تومان با نرخ واقعی
+    # تبدیل به تومان
     usd_rate = get_usd_to_toman_rate()
     print(f"\n💰 Converting to Toman (rate: {usd_rate:,.0f} Toman/USD)...")
     for col in df.columns:
